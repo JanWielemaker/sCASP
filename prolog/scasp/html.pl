@@ -668,6 +668,10 @@ connector(-, _Options) -->
     emit([ span(class(human), 'it is not the case that '),
            span(class(machine), '\u00ac ')
          ]).
+connector(implies, _Options) --> {pengine_self(M), M:source_lang(es)}, 
+    emit([ span(class(human), ', porque'),
+           span(class(machine), ' \u2190')
+         ]).
 connector(implies, _Options) -->
     emit([ span(class(human), ', because'),
            span(class(machine), ' \u2190')

@@ -6,6 +6,7 @@
 #pred throw('Player','Sign') :: '@(Player) threw @(Sign)'.
 #pred beat('Sign','OtherSign') :: '@(Sign) beats @(OtherSign)'.
 
+
 beat(rock,scissors).
 beat(scissors,paper).
 beat(paper,rock).
@@ -19,6 +20,3 @@ winner(Game,Player) :-
   throw(Player,Sign),
   throw(OtherPlayer,OtherSign),
   beat(Sign,OtherSign).
-
-
-

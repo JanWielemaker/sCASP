@@ -242,12 +242,14 @@ expanded(Assoc, PI) :-
 
 %!  include_global_constraint(+Callees, -Constraints, -AllCallees) is det
 
+:- det(include_global_constraint/3).
 include_global_constraint(Callees0, Constraints, Callees) :-
     include_global_constraint(Callees0, Callees, [], Constraints).
 
 include_global_constraint(Callees0, Callees, Constraints0, Constraints) :-
-    global_constraint(Body),
-    \+ ( member(Body0, Constraints0),
+    global_constraint(Constraint),
+    Constraint = clause(_, Body),
+    \+ ( member(clause(_, Body0), Constraints0),
          Body =@= Body0
        ),
     query_callees(Body, Called),
@@ -255,7 +257,7 @@ include_global_constraint(Callees0, Callees, Constraints0, Constraints) :-
     !,
     ord_union(Callees0, Called, Callees1),
     include_global_constraint(Callees1, Callees,
-                              [Body|Constraints0], Constraints).
+                              [Constraint|Constraints0], Constraints).
 include_global_constraint(Callees, Callees, Constraints, Constraints).
 
 

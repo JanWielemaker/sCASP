@@ -179,7 +179,7 @@ mkclause(Head, true, M, Clause) =>
 mkclause(Head, Body, M, Clause) =>
     qualify((Head:-Body), M, Clause).
 
-mkconstraint(M:Body, (:- Constraint)) :-
+mkconstraint(clause(ClauseRef, M:Body), clause(ClauseRef, (:- Constraint))) :-
     qualify(Body, M, Constraint).
 
 qualify(-(Head), M, Q) =>
@@ -259,13 +259,13 @@ include_global_constraint(Callees0, Callees, Constraints0, Constraints) :-
 include_global_constraint(Callees, Callees, Constraints, Constraints).
 
 
-global_constraint(M:Body) :-
+global_constraint(clause(ClauseRef, M:Body)) :-
     (   current_temporary_module(M)
     ;   current_module(M)
     ),
     current_predicate(M:(-)/0),
     \+ predicate_property(M:(-), imported_from(_)),
-    @(clause(-, Body), M).
+    @(clause(-, Body, ClauseRef), M).
 
 %!  predicate_callees(:Head, -Callees) is det.
 %

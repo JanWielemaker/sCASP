@@ -9,6 +9,7 @@
 :- use_module(common).
 :- use_module(output).
 :- use_module(html_text).
+:- use_module(messages).
 
 :- use_module(library(http/html_write)).
 :- use_module(library(http/term_html)).
@@ -52,6 +53,9 @@ user:file_search_path(css, library(scasp/web/css)).
 %
 %     - pred(Boolean)
 %       When `false` (default `true`), ignore user pred/1 rules.
+%     - justify_nmr(Boolean)
+%       When `false` (default `true`), do not omit a justification for
+%       the global constraints.
 
 :- det(html_justification_tree//2).
 
@@ -120,6 +124,9 @@ normal_justification_tree(Term-[], Options) -->
                     \connect(Options)
                   ])
             ])).
+normal_justification_tree(o_nmr_check-_, Options) -->
+    { option(justify_nmr(false), Options) },
+    !.
 normal_justification_tree(Term-Children, Options) -->
     { incr_indent(Options, Options1),
       (   Term == o_nmr_check
@@ -657,15 +664,18 @@ action(Term, Options) -->
 %   Emit a logical connector.
 
 connector(and, _Options) -->
-    emit([ span(class(human), ', and'),
+    { human_connector(and, Text) },
+    emit([ span(class(human), Text),
            span(class(machine), ',')
          ]).
 connector(not, _Options) -->
-    emit([ span(class(human), 'there is no evidence that '),
+    { human_connector(not, Text) },
+    emit([ span(class(human), Text),
            span(class(machine), 'not ')
          ]).
 connector(-, _Options) -->
-    emit([ span(class(human), 'it is not the case that '),
+    { human_connector(-, Text) },
+    emit([ span(class(human), Text),
            span(class(machine), '\u00ac ')
          ]).
 connector(implies, _Options) --> {pengine_self(M), M:source_lang(es)}, 
@@ -673,16 +683,21 @@ connector(implies, _Options) --> {pengine_self(M), M:source_lang(es)},
            span(class(machine), ' \u2190')
          ]).
 connector(implies, _Options) -->
-    emit([ span(class(human), ', because'),
+    { human_connector(implies, Text) },
+    emit([ span(class(human), Text),
            span(class(machine), ' \u2190')
          ]).
 connector(?, _Options) -->
-    emit([ span(class(human), '?'),
+    { human_connector(?, Text) },
+    emit([ span(class(human), Text),
            span(class(machine), '.')
          ]).
-connector(., _Options) -->
+connector('.', _Options) -->
     emit([ span(class('full-stop'), '.')
          ]).
+
+human_connector(Term, String) :-
+    phrase(scasp_justification_message(Term), [String]).
 
 full_stop(_Options) -->
     emit('\u220e').                     % QED block

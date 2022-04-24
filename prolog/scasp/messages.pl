@@ -1,10 +1,14 @@
 :- module(scasp_messages,
-          []).
+          [ scasp_lang/1,			 % -Lang
+            scasp_justification_message//1       % +Term
+          ]).
 :- use_module(lang/en, []).
 :- use_module(library(solution_sequences)).
 
+:- create_prolog_flag(scasp_lang, default, [keep(true)]).
+
 :- multifile
-    scasp_lang/2.
+    scasp_lang_module/2.
 
 :- dynamic lang_module_cache/1 as volatile.
 
@@ -21,12 +25,12 @@ lang_module(M) :-
     ).
 
 gen_lang_module(Module) :-
-    msg_language(Lang),
+    scasp_lang(Lang),
     clean_encoding(Lang, Clean),
     longest_id(Clean, LangID),
-    scasp_lang(LangID, Module).
+    scasp_lang_module(LangID, Module).
 gen_lang_module(Module) :-
-    scasp_lang(en, Module).
+    scasp_lang_module(en, Module).
 
 clean_encoding(Lang0, Lang) :-
     (   sub_atom(Lang0, A, _, _, '.')
@@ -34,11 +38,23 @@ clean_encoding(Lang0, Lang) :-
     ;   Lang = Lang0
     ).
 
-msg_language(Lang) :-
+%!  scasp_lang(-Lang) is det.
+%
+%   True when Lang is the language used for messages and justifications.
+
+scasp_lang(Lang),
+    current_prolog_flag(scasp_lang, Lang0),
+    Lang0 \== default =>
+    Lang = Lang0.
+scasp_lang(Lang),
     \+ current_prolog_flag(windows, true),
-    setlocale(messages, Lang, Lang).
-msg_language(Lang) :-
-    getenv('LANG', Lang).
+    setlocale(messages, Lang0, Lang0) =>
+    Lang = Lang0.
+scasp_lang(Lang),
+    getenv('LANG', Lang0) =>
+    Lang = Lang0.
+scasp_lang(Lang) =>
+    Lang = en.
 
 longest_id(Lang, Id) :-
     split_string(Lang, "_-", "", Components),
@@ -58,3 +74,8 @@ prolog:message(scasp(Term)) -->
     },
     Module:scasp_message(Term).
 
+scasp_justification_message(Term) -->
+    { lang_module(Module)
+    },
+    Module:scasp_message(Term),
+    !.

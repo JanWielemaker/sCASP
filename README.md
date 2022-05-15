@@ -1,8 +1,7 @@
 # SWI-Prolog port (swipl branch)
 
 > This is a fork from https://gitlab.software.imdea.org/ciao-lang/sCASP.
-> It provides a quick and dirty port of this interesting work to
-> SWI-Prolog __in the branch `swipl`__.
+> It provides a port of s(CASP) to SWI-Prolog __in the branch `swipl`__.
 
 ## About the SWI-Prolog port
 
@@ -45,13 +44,32 @@ available in the usual way: by consulting a file, asserting, etc. The
 program must respect the sCASP restrictions. Using any built-in or
 control structure that is not known to s(CASP) results in an error.
 
-The query is executed using `?/1`, `??/1` or scasp/2.   Notably
+From the toplevel REPL loop, s(CASP) queries are executed by prefixing
+them with one of the 7 operators below.
+
+  | Op   | Description                                   |
+  |------|-----------------------------------------------|
+  | ?--  | Prove and only show the bindings              |
+  | ?+-  | Prove, show bindings and model                |
+  | ?-+  | Prove, show bindings and justification (tree) |
+  | ?++  | Prove, show bindings model and justification) |
+  | ??+- | As above, but using _human_ language output   |
+  | ??-+ |						 |
+  | ??++ |						 |
+
+? and ?? are backward compatible aliases   for ?+- and ?++. For example,
+this shows the model.
+
+    ?- ? p(X).
+
+The predicate scasp/2 can be used to get access to the model and tree to
+reason about them. For example, this  returns   the  model  as a list of
+terms and the justification as a tree structure.
 
     ?- scasp(goal(X), [model(M), tree(T)]).
 
-returns the model as a list of terms and the justification as a tree structure.
 
-SWI-Prolog s(CASP) can also be used in your browser using
+SWI-Prolog  s(CASP)  can  also   be   used    in   your   browser  using
 [SWISH](https://swish.swi-prolog.org/example/scasp.swinb).
 
 Finally, there is a simple [web
@@ -85,45 +103,6 @@ constraint logic programming. Unlike similar systems, it does not
 employ any form of grounding. This allows `s(CASP)` to execute programs
 that are not finitely groundable, including those which make use of
 lists and terms.
-
-[![pipeline status](https://gitlab.software.imdea.org/ciao-lang/sCASP/badges/master/pipeline.svg)](https://gitlab.software.imdea.org/ciao-lang/sCASP/-/commits/master)
-
-## Installation of s(CASP)
-
-
-### CIAO
-
-`Ciao` is a programming language that builds up from a logic-based simple kernel, and is designed to be extensible and modular. It is available at [http://ciao-lang.org](http://ciao-lang.org). Its supports:
-
-* constraint logic programming (and, in particular, Prolog)
-* different levels of modularity (from small to large scale):
-  * modules as (analysis-friendly) compilation units
-  * bundles as collections of modules
-* packages as modules implementing language extensions (syntactic definitions, compilation options, compiler plugins)
-* assertions (as an homogeneous framework that allows static and dynamic verification to work cooperatively in a unified way)
-* multiparadigm constructs (meta-programming, higher-order, mutables, concurrency, functions, etc.) and interfacing with foreign code
-
-The system implements some advanced features such as separate and incremental compilation, global program analysis and static debugging and optimization (via source to source program transformation, `CiaoPP preprocessor`), a build automation system, documentation generator, debugger, and (Emacs-based) development environment.
-
-To begin the interactive installation type the following one-liner in
-a sh-compatible terminal (For Windows you need [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10)):
-
-```
-curl https://ciao-lang.org/boot -sSfL | sh
-```
-
-Do not forget to rerun the bashrc file `source ~/.bashrc`. If you have any problem go [here](http://ciao-lang.org/install.html) for details.
-
-### s(CASP)
-
-Once you have Ciao working in your computer to install `s(CASP)` type the following one-liner in a sh-compatible terminal:
-
-```
-ciao get gitlab.software.imdea.org/ciao-lang/sCASP
-```
-
-If you have any problem contact
-[this mail](mailto:joaquin.arias@urjc.es?subject=[s(CASP)%20Help]).
 
 ## Usage of s(CASP)
 

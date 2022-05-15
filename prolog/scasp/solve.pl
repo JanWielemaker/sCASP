@@ -8,8 +8,8 @@
 :- use_module(verbose).
 
 :- meta_predicate
-    solve(:, +, -, -). 
-:- dynamic passed/2. % added for debugging
+    solve(:, +, -, -).
+
 /** <module> The sCASP solver
 */
 
@@ -29,12 +29,13 @@
 solve(M:Goals, StackIn, StackOut, Model) :-
     stack_parents(StackIn, Parents),
     stack_proved(StackIn, ProvedIn),
-    solve(Goals, M, Parents, ProvedIn, _ProvedOout, StackIn, StackOut, Model).
+    solve(Goals, M, Parents, ProvedIn, _ProvedOut, StackIn, StackOut, Model).
 
-solve([], _, _, Proved, Proved, StackIn, [[]|StackIn], []).  :- assertz(passed(34, solve/8)).
+solve([], _, _, Proved, Proved, StackIn, [[]|StackIn], []).
 solve([Goal|Goals], M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model) :-
     verbose(print_check_calls_calling(Goal, StackIn)),
     check_goal(Goal, M, Parents, ProvedIn, ProvedMid, StackIn, StackMid, Modelx),
+    verbose(format('Check ~@\n', [print_goal(Goal)])),
     Modelx = [AddGoal|JGoal],
     verbose(format('Success ~@\n', [print_goal(Goal)])),
     solve(Goals, M, Parents, ProvedMid, ProvedOut, StackMid, StackOut, Modelxs),
@@ -42,14 +43,14 @@ solve([Goal|Goals], M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model) :
     (   shown_predicate(M:Goal)
     ->  Model = [AddGoal, JGoal|JGoals]
     ;   Model = [JGoal|JGoals]
-    ), assertz(passed(35, solve/8)).
+    ).
 
 
 proved_relatives(not(Goal), Proved, Relatives) =>
-    proved_relatives(Goal, Proved, Relatives), assertz(passed(48, proved_relatives/3)).
+    proved_relatives(Goal, Proved, Relatives).
 proved_relatives(Goal, Proved, Relatives) =>
     functor(Goal, Name, Arity),
-    get_assoc(Name/Arity, Proved, Relatives), assertz(passed(50, proved_relatives/3)).
+    get_assoc(Name/Arity, Proved, Relatives).
 
 %!  check_goal(+Goal, +Module, +Parents, +ProvedIn, -ProvedOut,
 %!              +StackIn, -StackOut, -Model)
@@ -86,33 +87,33 @@ check_goal_(co_success, Goal, _M,
     AddGoal = chs(Goal),
     add_proved(AddGoal, ProvedIn, ProvedOut),
     (   current_prolog_flag(scasp_assume, true)
-    ->  mark_prev_goal(Goal,StackIn, StackMark),
+    ->  mark_prev_goal(Goal, StackIn, StackMark),
         StackOut = [[],AddGoal|StackMark]
     ;   StackOut = [[],AddGoal|StackIn]
-    ), assertz(passed(83, check_goal_/9)).
+    ).
 % already proved in the stack
 check_goal_(proved, Goal, _M,
             _Parents, ProvedIn, ProvedOut, StackIn, StackOut,
             [AddGoal]) :-
     AddGoal = proved(Goal),
     add_proved(AddGoal, ProvedIn, ProvedOut),
-    StackOut = [[], proved(Goal)|StackIn], assertz(passed(94, check_goal_/9)).
+    StackOut = [[], proved(Goal)|StackIn].
 % coinduction does neither success nor fails <- the execution continues inductively
 check_goal_(cont, Goal, M,
             Parents, ProvedIn, ProvedOut, StackIn, StackOut,
             Model) :-
     solve_goal(Goal, M,
                [Goal|Parents], ProvedIn, ProvedOut, StackIn, StackOut,
-               Model), assertz(passed(100, check_goal_/9)).
+               Model).
 % coinduction fails <- the negation of a call unifies with a call in the call stack
 check_goal_(co_failure, _Goal, _M,
             _Parents, _ProvedIn, _ProvedOut, _StackIn, _StackOut,
-            _Model) :- assertz(passed(108, check_goal_/9)), 
+            _Model) :-
     fail.
 
-mark_prev_goal(Goal,[I|In],[assume(Goal)|In]) :- Goal == I, !, assertz(passed(113, mark_prev_goal/3)).
-mark_prev_goal(Goal,[I|In],[I|Mk]) :- mark_prev_goal(Goal,In,Mk), assertz(passed(114, mark_prev_goal/3)).
-mark_prev_goal(_Goal,[],[]) :- assertz(passed(115, mark_prev_goal/3)).
+mark_prev_goal(Goal, [I|In], [assume(Goal)|In]) :-  Goal == I, !.
+mark_prev_goal(Goal, [I|In], [I|Mk]) :- mark_prev_goal(Goal,In,Mk).
+mark_prev_goal(_Goal,[],[]).
 
 %!  dynamic_consistency_check(+Goal, +Module, +StackIn) is semidet.
 %
@@ -125,24 +126,24 @@ dynamic_consistency_check(Goal, M, StackIn) :-
 %   scasp_trace(scasp_trace_dcc, dcc_call(Goal, StackIn)),
     dynamic_consistency_eval(Body, M, StackIn),
     !,
-    scasp_trace(scasp_trace_dcc, dcc_discard(Goal, Body)), assertz(passed(121, dynamic_consistency_check/3)), 
+    scasp_trace(scasp_trace_dcc, dcc_discard(Goal, Body)),
     fail.
-dynamic_consistency_check(_, _, _) :- assertz(passed(130, dynamic_consistency_check/3)).
+dynamic_consistency_check(_, _, _).
 
 
-dynamic_consistency_eval([], _, _) :- assertz(passed(133, dynamic_consistency_eval/3)).
+dynamic_consistency_eval([], _, _).
 dynamic_consistency_eval([SubGoal|Bs], M, StackIn) :-
     dynamic_consistency_eval_(SubGoal, M, StackIn),
-    dynamic_consistency_eval(Bs, M, StackIn), assertz(passed(134, dynamic_consistency_eval/3)).
+    dynamic_consistency_eval(Bs, M, StackIn).
 
 dynamic_consistency_eval_(not(SubGoal), M, StackIn) :-
     user_predicate(M:SubGoal), !,
-    member(not(SubGoal), StackIn), assertz(passed(138, dynamic_consistency_eval_/3)).
+    member(not(SubGoal), StackIn).
 dynamic_consistency_eval_(SubGoal, M, StackIn) :-
     user_predicate(M:SubGoal), !,
-    member(SubGoal, StackIn), assertz(passed(141, dynamic_consistency_eval_/3)).
+    member(SubGoal, StackIn).
 dynamic_consistency_eval_(SubGoal, _, _) :-
-    solve_goal_builtin(SubGoal, _), assertz(passed(144, dynamic_consistency_eval_/3)).
+    solve_goal_builtin(SubGoal, _).
 
 
 %!  solve_goal(+Goal, +Module,
@@ -165,7 +166,7 @@ solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, GoalModel) 
                        Parents, ProvedIn, ProvedOut, [Goal|StackIn], StackOut,
                        Model)
     ),
-    GoalModel = [Goal|Model], assertz(passed(157, solve_goal/8)).
+    GoalModel = [Goal|Model].
 solve_goal(Goal, _M,
            _Parents, ProvedIn, ProvedOut, StackIn, [[], Goal|StackIn],
            GoalModel) :-
@@ -174,10 +175,10 @@ solve_goal(Goal, _M,
     !,
     NV is Expresion,
     V .\=. NV,
-    GoalModel = [Goal], assertz(passed(169, solve_goal/8)).
+    GoalModel = [Goal].
 solve_goal(Goal, _, _, _, _, _, _, _) :-
     Goal = not(true),
-    !, assertz(passed(178, solve_goal/8)), 
+    !,
     fail.
 solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model) :-
     table_predicate(M:Goal),
@@ -187,26 +188,26 @@ solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model) :-
     solve_goal_table_predicate(Goal, M, Parents, ProvedIn, ProvedOut,
                                AttStackIn, AttStackOut, AttModel),
     AttStackOut ~> stack(StackOut),
-    AttModel ~> model(Model), assertz(passed(182, solve_goal/8)).
+    AttModel ~> model(Model).
 solve_goal(call(Goal), M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
            [call(Goal)|Model]) :-
     !,
-    solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model), assertz(passed(191, solve_goal/8)).
+    solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model).
 solve_goal(not(call(Goal)), M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
            [not(call(Goal))|Model]) :-
     !,
     solve_goal(not(Goal), M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
-               Model), assertz(passed(195, solve_goal/8)).
+               Model).
 solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
            [Goal|Model]) :-
     Goal = findall(_, _, _),
     !,
-    exec_findall(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model), assertz(passed(200, solve_goal/8)).
+    exec_findall(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model).
 solve_goal(not(Goal), M, Parents, ProvedIn, ProvedIn, StackIn, StackIn,
            [not(Goal)]) :-
     Goal = findall(_, _, _),
     !,
-    exec_neg_findall(Goal, M, Parents, ProvedIn, StackIn), assertz(passed(205, solve_goal/8)).
+    exec_neg_findall(Goal, M, Parents, ProvedIn, StackIn).
 solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model) :-
     user_predicate(M:Goal),
     !,
@@ -218,11 +219,13 @@ solve_goal(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model) :-
         scasp_trace(scasp_trace_failures,
                     trace_failure(Goal, [Goal|StackIn])),
         fail
-    ), assertz(passed(210, solve_goal/8)).
+    ).
 solve_goal(Goal, _M, _Parents, ProvedIn, ProvedIn, StackIn, [[], Goal|StackIn],
            Model) :-
-    solve_goal_builtin(Goal, Model), assertz(passed(222, solve_goal/8)).
+    solve_goal_builtin(Goal, Model).
 
+mkgoal(Goal, generated(_), Goal                     ) :- !.
+mkgoal(Goal, Origin      , goal_origin(Goal, Origin)).
 
 %!  solve_goal_forall(+Forall, +Module,
 %!                    +Parents, +ProvedIn, -ProvedOut, +StackIn, -StackOut,
@@ -273,20 +276,20 @@ solve_goal_forall(forall(Var, Goal), M,
         % !, %% Position of the cut in s(ASP) - remove answers in hamcycle_two.lp
              %% Without cuts the evaluation may loop - e.g. queens.lp
         append(ModelMid, ModelList, Model)
-    ), assertz(passed(236, solve_goal_forall/8)).
+    ).
 
 check_unbound(Var, ground) :-
-    ground(Var), !, assertz(passed(278, check_unbound/2)).
+    ground(Var), !.
 check_unbound(Var, List) :-
-    get_neg_var(Var, List), !, assertz(passed(280, check_unbound/2)).
+    get_neg_var(Var, List), !.
 check_unbound(Var, 'clpq'(NewVar, Constraints)) :-
     dump_clpq_var([Var], [NewVar], Constraints),
-    Constraints \== [], !, assertz(passed(282, check_unbound/2)).
+    Constraints \== [], !.
 check_unbound(Var, []) :-
-    var(Var), !, assertz(passed(285, check_unbound/2)).
+    var(Var), !.
 
 exec_with_clpq_constraints(_Var, _Goal, _M, _, [],
-                           _Parents, ProvedIn, ProvedIn, StackIn, StackIn, []) :- assertz(passed(288, exec_with_clpq_constraints/11)).
+                           _Parents, ProvedIn, ProvedIn, StackIn, StackIn, []).
 exec_with_clpq_constraints(Var, Goal, M, entry(ConVar, ConEntry),
                            [dual(ConVar, ConDual)|Duals],
                            Parents, ProvedIn, ProvedOut, StackIn, StackOut,
@@ -335,9 +338,9 @@ exec_with_clpq_constraints(Var, Goal, M, entry(ConVar, ConEntry),
                                entry(ConVar02, ConEntry02),
                                Duals, Parents, ProvedOut02, ProvedOut,
                                StackOut02, StackOut, Model04),
-    append(Model03, Model04, Model), assertz(passed(290, exec_with_clpq_constraints/11)).
+    append(Model03, Model04, Model).
 
-exec_with_neg_list(_, _, _, [], _, ProvedIn, ProvedIn, StackIn, StackIn, []) :- assertz(passed(340, exec_with_neg_list/10)).
+exec_with_neg_list(_, _, _, [], _, ProvedIn, ProvedIn, StackIn, StackIn, []).
 exec_with_neg_list(Var, Goal, M, [Value|Vs],
                    Parents, ProvedIn, ProvedOut, StackIn, StackOut,
                    Model) :-
@@ -350,7 +353,7 @@ exec_with_neg_list(Var, Goal, M, [Value|Vs],
                    [NewGoal, Value])),
     exec_with_neg_list(Var, Goal, M, Vs, Parents,
                        ProvedMid, ProvedOut, NewStackMid, StackOut, Models),
-    append(ModelMid, Models, Model), assertz(passed(341, exec_with_neg_list/10)).
+    append(ModelMid, Models, Model).
 
 %!  solve_goal_table_predicate(+Goal, +Module, +Parents, +ProvedIn, -ProvedOut,
 %!                             +AttStackIn, -AttStackOut, -AttModel)
@@ -359,11 +362,11 @@ exec_with_neg_list(Var, Goal, M, [Value|Vs],
 %   defined in the program using the directive _#table pred/n._
 
 solve_goal_table_predicate(Goal, M, Parents, ProvedIn, ProvedOut, AttStackIn, AttStackOut, AttModel) :-
-    M:pr_rule(Goal, Body),
+    M:pr_rule(Goal, Body, _Origin),
     AttStackIn ~> stack(StackIn),
     solve(Body, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model),
     AttStackOut <~ stack(StackOut),
-    AttModel <~ model([Goal|Model]), assertz(passed(361, solve_goal_table_predicate/8)).
+    AttModel <~ model([Goal|Model]).
 
 %!  solve_goal_predicate(+Goal, +Module,
 %!                       +Parents, +ProvedIn, -ProvedOut, +StackIn, -StackOut,
@@ -373,10 +376,11 @@ solve_goal_table_predicate(Goal, M, Parents, ProvedIn, ProvedOut, AttStackIn, At
 
 solve_goal_predicate(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
                      GoalModel) :-
-    M:pr_rule(Goal, Body),
-    solve(Body, M, Parents, ProvedIn, ProvedMid, StackIn, StackOut, BodyModel),
+    M:pr_rule(Goal, Body, Origin),
+    mkgoal(Goal, Origin, StackGoal),
+    solve(Body, M, Parents, ProvedIn, ProvedMid, [StackGoal|StackIn], StackOut, BodyModel),
     add_proved(Goal, ProvedMid, ProvedOut),
-    GoalModel = [Goal|BodyModel], assertz(passed(374, solve_goal_predicate/8)).
+    GoalModel = [Goal|BodyModel].
 
 %!  solve_goal_builtin(+Goal, -Model)
 %
@@ -384,43 +388,43 @@ solve_goal_predicate(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
 
 solve_goal_builtin(is(X, Exp), Model) :-
     exec_goal(is(X, Exp)),
-    Model = [is(X, Exp)], assertz(passed(385, solve_goal_builtin/2)). %% the Model should 'Start' with the Goal
+    Model = [is(X, Exp)]. %% the Model should 'Start' with the Goal
 solve_goal_builtin(builtin(Goal), Model) :- !,
     exec_goal(Goal),
-    Model = [builtin(Goal)], assertz(passed(388, solve_goal_builtin/2)).
+    Model = [builtin(Goal)].
 solve_goal_builtin(Goal, Model) :-
     clp_builtin(Goal), !,
     exec_goal(apply_clpq_constraints(Goal)),
-    Model = [Goal], assertz(passed(391, solve_goal_builtin/2)).
+    Model = [Goal].
 solve_goal_builtin(Goal, Model) :-
     clp_interval(Goal), !,
     exec_goal(Goal),
-    Model = [Goal], assertz(passed(395, solve_goal_builtin/2)).
+    Model = [Goal].
 solve_goal_builtin(not(Goal), _Model) :-
     clp_interval(Goal), !,
-    scasp_warning(scasp(failure_calling_negation(Goal))), assertz(passed(399, solve_goal_builtin/2)),
+    scasp_warning(scasp(failure_calling_negation(Goal))),
     fail.
 solve_goal_builtin(Goal, Model) :-
     clp_builtin(Goal),
     !,
     exec_goal(apply_clpq_constraints(Goal)),
-    Model = [Goal], assertz(passed(403, solve_goal_builtin/2)).
+    Model = [Goal].
 solve_goal_builtin(Goal, Model) :-
     prolog_builtin(Goal), !,
     exec_goal(Goal),
-    Model = [Goal], assertz(passed(408, solve_goal_builtin/2)).
+    Model = [Goal].
 % The predicate is not defined as user_predicates neither builtin
 solve_goal_builtin(Goal, Model) :-
     verbose(format('The predicate ~p is not user_defined / builtin\n', [Goal])),
     (   Goal = not(_)
     ->  Model = [Goal] %% the negation of a not defined predicate success.
     ;   fail %% a not defined predicate allways fails.
-    ), assertz(passed(413, solve_goal_builtin/2)).
+    ).
 
 exec_goal(A \= B) :- !,
     verbose(format('exec ~@\n', [print_goal(A \= B)])),
     A .\=. B,
-    verbose(format('ok   ~@\n', [print_goal(A \= B)])), assertz(passed(420, exec_goal/1)).
+    verbose(format('ok   ~@\n', [print_goal(A \= B)])).
 exec_goal(Goal) :-
     (   current_prolog_flag(scasp_verbose, true)
     ->  E = error(_,_),
@@ -428,34 +432,30 @@ exec_goal(Goal) :-
         catch(call(Goal), E, (print_message(warning, E), fail)),
         verbose(format('ok   goal ~@ \n', [print_goal(Goal)]))
     ;   catch(call(Goal), error(_,_), fail)
-    ), assertz(passed(424, exec_goal/1)).
+    ).
 
 % TODO: Pending StackOut to carry the literal involved in the findall
 % (if needed)
 % TODO: Handling of ProvedIn/ProvedOut
 exec_findall(findall(Var, Call, List), M,
              Parents, ProvedIn, ProvedOut, StackIn, StackOut, Model) :-
-
     verbose(format('execution of findall(~p, ~p, _) \n', [Var, Call])),
-
     findall(t(Var, S, M), (
             solve([Call], M, Parents, ProvedIn, ProvedOut, StackIn, S0, M),
             append(S, StackIn, S0)
         ), VSMList),
-
     process_vsmlist(VSMList, List, SOut, Model),
     append(SOut, [findall(Var, Call, List)|StackIn], StackOut),
-
-    verbose(format('Result execution = ~p \n', [List])), assertz(passed(436, exec_findall/8)).
+    verbose(format('Result execution = ~p \n', [List])).
 
 process_vsmlist(VSMList, List, [[]|StackOut], Model) :-
     process_vsmlist_(VSMList, List, StackOut, Model).
 
-process_vsmlist_([], [], [], []) :- assertz(passed(454, process_vsmlist_/4)).
+process_vsmlist_([], [], [], []).
 process_vsmlist_([t(V, [[]|S], M)|Rs], [V|Vs], S1, M1) :-
     process_vsmlist_(Rs, Vs, S0, M0),
     append(S0, S, S1),
-    append(M, M0, M1), assertz(passed(455, process_vsmlist_/4)).
+    append(M, M0, M1).
 
 % TODO: What to do with the negation of findall/3 (if required)
 exec_neg_findall(Goal, _, _, _, _) :-
@@ -476,22 +476,22 @@ check_CHS(Goal, M, Parents, Proved, I, Result) :-
     (   user_predicate(M:Goal)
     ->  check_CHS_(Goal, M, Parents, Proved, I, Result)
     ;   Result = cont
-    ), assertz(passed(475, check_CHS/6)).
+    ).
 
 % inmediate success if the goal has already been proved.
 check_CHS_(Goal, _M, _Parents, Proved, _Stack, proved) :-
     ground(Goal),
     proved_in_stack(Goal, Proved),
-    !, assertz(passed(482, check_CHS/6)).
+    !.
 % coinduction success <- cycles containing even loops may succeed
 check_CHS_(Goal, _M, Parents, _Proved, _I, co_success) :-
     check_parents(Goal, Parents, even),
-    !, assertz(passed(487, check_CHS/6)).
+    !.
 % coinduction fails <- the goal is entailed by its negation in the
 % call stack
 check_CHS_(Goal, _M, Parents, Proved, _Stack, co_failure) :-
     neg_in_stack(Goal, Parents, Proved), !,
-    verbose(format('Negation of the goal in the stack, failling (Goal = ~w)\n', [Goal])), assertz(passed(492, check_CHS/6)).
+    verbose(format('Negation of the goal in the stack, failling (Goal = ~w)\n', [Goal])).
 % coinduction fails <- cycles containing positive loops can be solved
 % using tabling
 check_CHS_(Goal, M, Parents, _Proved, _Stask, co_failure) :-
@@ -501,20 +501,20 @@ check_CHS_(Goal, M, Parents, _Proved, _Stask, co_failure) :-
         check_parents(Goal, Parents, fail_pos(S)),
         verbose(format('Positive loop, failing (Goal == ~w)\n', [Goal])),
         scasp_warning(scasp_warn_pos_loops, pos_loop(fail, Goal, S))
-    ), !, assertz(passed(497, check_CHS/6)).
+    ), !.
 check_CHS_(Goal, M, Parents, _Proved, _Stack, _Cont) :-
     \+ table_predicate(M:Goal),
     \+ \+ (
         check_parents(Goal, Parents, pos(S)),
         verbose(format('Positive loop, continuing (Goal = ~w)\n', [Goal])),
         scasp_info(scasp_warn_pos_loops, pos_loop(continue, Goal, S))
-    ), assertz(passed(505, check_CHS/6)), fail.
+    ), fail.
 % coinduction does not succeed or fail <- the execution continues inductively
 check_CHS_(Goal, _M, Parents, Proved, _Stack, cont) :-
     (   ground(Goal)
     ->  constrained_neg_in_stack(Goal, Parents, Proved)
     ;   ground_neg_in_stack(Goal, Parents, Proved)
-    ), assertz(passed(513, check_CHS/6)).
+    ).
 
 %!  neg_in_stack(+Goal, +Parents, +Proved) is semidet.
 %
@@ -526,11 +526,11 @@ neg_in_stack(Goal, _Parents, Proved) :-
     proved_relatives(Goal, Proved, Relatives),
     member(Relative, Relatives),
     is_negated_goal(Goal, Relative),
-    !, assertz(passed(525, neg_in_stack/3)).
+    !.
 neg_in_stack(Goal, Parents, _) :-
     member(Relative, Parents),
     is_negated_goal(Goal, Relative),
-    !, assertz(passed(530, neg_in_stack/3)).
+    !.
 
 is_negated_goal(Goal, Head) :-
     (   Goal = not(G)
@@ -545,7 +545,7 @@ is_negated_goal(Goal, Head) :-
         ;   Goal =@= NegGoal
         ->  scasp_warning(co_failing_in_negated_loop(Goal, NegGoal))
         )
-    ), assertz(passed(535, is_negated_goal/2)).
+    ).
 
 %!  ground_neg_in_stack(++Goal, +Parents, +Proved) is det.
 %
@@ -559,7 +559,7 @@ ground_neg_in_stack(Goal, Parents, Proved) :-
     ->  maplist(ground_neg_in_stack(Goal), Relatives)
     ;   true
     ),
-    maplist(ground_neg_in_stack(Goal), Parents), assertz(passed(557, ground_neg_in_stack/3)).
+    maplist(ground_neg_in_stack(Goal), Parents).
 
 ground_neg_in_stack(TGoal, SGoal) :-
     gn_match(TGoal, SGoal, Goal, NegGoal),
@@ -567,12 +567,12 @@ ground_neg_in_stack(TGoal, SGoal) :-
     verbose(format('\t\tCheck disequality of ~@ and ~@\n',
                    [print_goal(TGoal), print_goal(SGoal)])),
     loop_term(Goal, NegGoal),
-    !, assertz(passed(564, ground_neg_in_stack/3)).
-ground_neg_in_stack(_, _) :-  assertz(passed(571, ground_neg_in_stack/3)).
+    !.
+ground_neg_in_stack(_, _).
 
-gn_match(Goal, chs(not(NegGoal)), Goal, NegGoal) :- !, assertz(passed(573, gn_match/4)).
-gn_match(not(Goal), chs(NegGoal), Goal, NegGoal) :- !, assertz(passed(574, gn_match/4)).
-gn_match(not(Goal), NegGoal,      Goal, NegGoal) :- !, assertz(passed(575, gn_match/4)).
+gn_match(Goal, chs(not(NegGoal)), Goal, NegGoal) :- !.
+gn_match(not(Goal), chs(NegGoal), Goal, NegGoal) :- !.
+gn_match(not(Goal), NegGoal,      Goal, NegGoal) :- !.
 
 
 %!  constrained_neg_in_stack(+Goal, +Parents, +Proved) is det.
@@ -587,7 +587,7 @@ constrained_neg_in_stack(Goal, Parents, Proved) :-
     ->  maplist(contrained_neg(Goal), Relatives)
     ;   true
     ),
-    maplist(contrained_neg(Goal), Parents), assertz(passed(585, constrained_neg_in_stack/3)).
+    maplist(contrained_neg(Goal), Parents).
 
 contrained_neg(not(Goal), NegGoal) :-
     is_same_functor(Goal, NegGoal),
@@ -595,15 +595,15 @@ contrained_neg(not(Goal), NegGoal) :-
                    [print_goal(Goal), print_goal(NegGoal)])), !,
     loop_term(Goal, NegGoal),
     !,
-    verbose(format('\t\tOK\n', [])), assertz(passed(592, contrained_neg/2)).
+    verbose(format('\t\tOK\n', [])).
 contrained_neg(Goal, not(NegGoal)) :-
     is_same_functor(Goal, NegGoal),
     verbose(format('\t\tCheck if not(~@) is consistent with ~@\n',
                    [print_goal(Goal), print_goal(NegGoal)])), !,
     loop_term(Goal, NegGoal),
     !,
-    verbose(format('\t\tOK\n', [])), assertz(passed(599, contrained_neg/2)).
-contrained_neg(_,_) :- assertz(passed(606, contrained_neg/2)).
+    verbose(format('\t\tOK\n', [])).
+contrained_neg(_,_).
 
 is_same_functor(Term1, Term2) :-
     functor(Term1, Name, Arity, Type),
@@ -620,7 +620,7 @@ proved_in_stack(Goal, Proved) :-
     (   Goal == Relative
     ;   Goal == chs(Relative)
     ),
-    !, assertz(passed(617, proved_in_stack/2)).
+    !.
 
 %!  check_parents(+Goal, +Parents, -Type) is semidet.
 %
@@ -629,9 +629,9 @@ proved_in_stack(Goal, Proved) :-
 
 check_parents(not(Goal), Parents, Type) :-
     !,
-    check_parents(not(Goal), 1, Parents, Type), assertz(passed(630, check_parents/3)).
+    check_parents(not(Goal), 1, Parents, Type).
 check_parents(Goal, Parents, Type) :-
-    check_parents(Goal, 0, Parents, Type), assertz(passed(633, check_parents/3)).
+    check_parents(Goal, 0, Parents, Type).
 
 check_parents(Goal, 0, [Parent|_Parents], Type) :-
     (   \+ \+ type_loop_fail_pos(Goal, Parent)
@@ -639,7 +639,7 @@ check_parents(Goal, 0, [Parent|_Parents], Type) :-
     ;   \+ Goal \= Parent
     ->  Type = pos(Parent)
     ),
-    !, assertz(passed(636, check_parents/4)).
+    !.
 check_parents(Goal, N, [Parent|Parents], Type) :-
     (   even_loop(Goal, Parent, N)
     ->  Type = even
@@ -649,26 +649,26 @@ check_parents(Goal, N, [Parent|Parents], Type) :-
             check_parents(Goal, NewN, Parents, Type)
         ;   check_parents(Goal, N, Parents, Type)
         )
-    ), assertz(passed(643, check_parents/4)).
+    ).
 
 even_loop(not(Goal), not(Parent), _) :-
     Goal =@= Parent,
     !,
-    Goal = Parent, assertz(passed(654, even_loop/2)).
+    Goal = Parent.
 even_loop(Goal, Parent, N) :-
     Goal \= not(_),
     Goal == Parent,
     N > 0,
-    0 =:= mod(N, 2), assertz(passed(658, even_loop/2)).
+    0 =:= mod(N, 2).
 
 type_loop_fail_pos(Goal, S) :-
-    Goal == S, !, assertz(passed(664, type_loop_fail_pos/2)).
+    Goal == S, !.
 type_loop_fail_pos(Goal, S) :-
     variant(Goal, S), !,
-    scasp_warning(variant_loop(Goal, S)), assertz(passed(664, type_loop_fail_pos/2)).
+    scasp_warning(variant_loop(Goal, S)).
 type_loop_fail_pos(Goal, S) :-
     entail_terms(Goal, S),
-    scasp_warning(subsumed_loop(Goal, S)), assertz(passed(664, type_loop_fail_pos/2)).
+    scasp_warning(subsumed_loop(Goal, S)).
 
 %!  stack_parents(+Stack, -Parents) is det.
 %
@@ -683,12 +683,15 @@ stack_parents([], _, []).
 stack_parents([[]|T], N, Parents) :-
     !,
     N1 is N-1,
-    stack_parents(T, N1, Parents), assertz(passed(683, stack_parents/3)).
+    stack_parents(T, N1, Parents).
 stack_parents([_|T], N, Parents) :-
     N < 0,
     !,
     N1 is N+1,
-    stack_parents(T, N1, Parents), assertz(passed(687, stack_parents/3)).
+    stack_parents(T, N1, Parents).
+stack_parents([goal_origin(H, _)|T], N, [H|TP]) :-
+    !,
+    stack_parents(T, N, TP).
 stack_parents([H|T], N, [H|TP]) :-
     stack_parents(T, N, TP).
 
@@ -708,7 +711,7 @@ stack_proved(Stack, Proved) :-
     empty_assoc(Proved0),
     stack_proved(Stack, 0, -1, Proved0, Proved).
 
-stack_proved([], _, _, Proved, Proved) :- assertz(passed(711, stack_proved/5)).
+stack_proved([], _, _, Proved, Proved).
 stack_proved([Top|Ss], Intervening, MaxInter, Proved0, Proved) :-
     (   Top == []
     ->  NewInter is Intervening - 1,
@@ -719,23 +722,25 @@ stack_proved([Top|Ss], Intervening, MaxInter, Proved0, Proved) :-
         stack_proved(Ss, NewInter, NewMaxInter, Proved0, Proved)
     ;   add_proved(Top, Proved0, Proved1),
         stack_proved(Ss, Intervening, MaxInter, Proved1, Proved)
-    ), assertz(passed(712, stack_proved/5)).
+    ).
 
+add_proved(goal_origin(Goal, _), Assoc0, Assoc) :-
+    add_proved(Goal, Goal, Assoc0, Assoc).
 add_proved(Goal, Assoc0, Assoc) :-
     add_proved(Goal, Goal, Assoc0, Assoc).
 
 add_proved(not(Term), Goal, Assoc0, Assoc) =>
-    add_proved(Term, Goal, Assoc0, Assoc), assertz(passed(727, add_proved/4)).
+    add_proved(Term, Goal, Assoc0, Assoc).
 add_proved(chs(Term), Goal, Assoc0, Assoc) =>
-    add_proved(Term, Goal, Assoc0, Assoc), assertz(passed(729, add_proved/4)).
+    add_proved(Term, Goal, Assoc0, Assoc).
 add_proved(forall(_,_), _Goal, Assoc0, Assoc) =>
-    Assoc = Assoc0, assertz(passed(731, add_proved/4)).
+    Assoc = Assoc0.
 add_proved(Term, Goal, Assoc0, Assoc) =>
     functor(Term, Name, Arity),
     (   get_assoc(Name/Arity, Assoc0, List, Assoc, [Goal|List])
     ->  true
     ;   put_assoc(Name/Arity, Assoc0, [Goal], Assoc)
-    ), assertz(passed(733, add_proved/4)).
+    ).
 
 %!  solve_c_forall(+Forall, +Module,
 %!                 +Parents, +ProvedIn, -ProvedOut, +StackIn, -StackOut,
@@ -767,7 +772,7 @@ solve_c_forall(Forall, M, Parents, ProvedIn, ProvedOut, StackIn, [[]|StackOut],
                            entry(Vars1, Initial_Const),
                            dual(Vars1, [Initial_Const]),
                            OtherVars, StackIn, StackOut, Model)
-    ), assertz(passed(752, solve_c_forall/8)).
+    ).
 
 solve_other_forall(Goal, M, Parents, ProvedIn, ProvedOutExit,
                    entry(Vars, Initial_Const),
@@ -825,7 +830,7 @@ solve_other_forall(Goal, M, Parents, ProvedIn, ProvedOutExit,
                            dual(Vars2, [Initial_Const]),
                            OtherVars2, StackIn2, StackOutExit, ModelExit), !,
         OtherVars = OtherVars2
-    ), assertz(passed(772, solve_other_forall/11)).
+    ).
 
 %!  solve_var_forall_(+Goal, +Module, +Parents, +ProvedIn, -ProvedOut,
 %!                    +Entry, +Duals, +OtherVars,
@@ -844,7 +849,7 @@ solve_other_forall(Goal, M, Parents, ProvedIn, ProvedOutExit,
 %   explicitly.
 
 solve_var_forall_(_Goal, _M, _Parents, Proved, Proved, _, dual(_, []),
-                  _OtherVars, StackIn, StackIn, []) :- !, assertz(passed(846, solve_var_forall_/11)).
+                  _OtherVars, StackIn, StackIn, []) :- !.
 solve_var_forall_(Goal, M, Parents, ProvedIn, ProvedOut,
                   entry(C_Vars, Prev_Store),
                   dual(C_Vars, [C_St|C_Stores]),
@@ -882,21 +887,21 @@ solve_var_forall_(Goal, M, Parents, ProvedIn, ProvedOut,
                       entry(C_Vars2, Prev_Store2),
                       dual(C_Vars2, C_Stores2),
                       OtherVars, StackOut2, StackOut, Model4),
-    append(Model3, Model4, Model), assertz(passed(848, solve_var_forall_/11)).
+    append(Model3, Model4, Model).
 
 append_set([],X,X):- !.
 append_set([A|As],Bs,Cs) :-
     \+ \+ memberchk_oc(A, Bs),
     !,
-    append_set(As,Bs,Cs), assertz(passed(888, append_set/3)).
+    append_set(As,Bs,Cs).
 append_set([A|As],Bs,[A|Cs]) :-
-    append_set(As,Bs,Cs), assertz(passed(892, append_set/3)).
+    append_set(As,Bs,Cs).
 
 memberchk_oc(Term, [H|T]) :-
     (   unify_with_occurs_check(Term, H)
     ->  true
     ;   memberchk_oc(Term, T)
-    ), assertz(passed(895, memberchk_oc/2)).
+    ).
 
 apply_const_store([]) :- !.
 apply_const_store([C|Cs]) :-
@@ -904,11 +909,11 @@ apply_const_store([C|Cs]) :-
     apply_const_store(Cs).
 
 apply_constraint(A \= B) =>
-    A .\=. B, assertz(passed(906, apply_constraint/1)).
+    A .\=. B.
 apply_constraint(A = B) =>
-    A = B, assertz(passed(908, apply_constraint/1)).
+    A = B.
 apply_constraint(CLPConstraint) =>
-    apply_clpq_constraints(CLPConstraint), assertz(passed(910, apply_constraint/1)).
+    apply_clpq_constraints(CLPConstraint).
 
 %!  find_duals(+C_Vars, +C_Vars1, +OtherVars, -Duals)
 %
@@ -933,18 +938,18 @@ find_duals(C_Vars, C_Vars1, OtherVars, Duals) :-
     append(Pending1, OtherCLPVars, CLPVars1),
     clpqr_dump_constraints(CLPVars, CLPVars1, CLP),
     append(CLP, Dump, Constraints),
-    make_duals(Constraints,Duals), !, assertz(passed(928, find_duals/4)).
+    make_duals(Constraints,Duals), !.
 
 make_duals(Ls,Ds) :-
     make_duals_([],Ls,[],Ds).
 
-make_duals_(_,[],Ds,Ds) :- assertz(passed(941, make_duals_/4)).
+make_duals_(_,[],Ds,Ds).
 make_duals_(Prev,[A|As],D0,Ds) :-
     append(Prev,[A],Prev1),
     make_duals_(Prev1,As,D0,D1),
     dual(A,Duals_A),
     combine(Duals_A,Prev,As,Ls),
-    append(Ls,D1,Ds), assertz(passed(942, make_duals_/4)).
+    append(Ls,D1,Ds).
 
 combine([A],Prev,Post,[Rs]) :-
     append(Prev,[A|Post],Rs).
@@ -954,14 +959,14 @@ combine([A,B|As],Prev,Post,[RA|RAs]) :-
 
 :- det(dual/2).
 
-dual(#=(A,B), [#<(A,B), #>(A,B)]) :- assertz(passed(957, dual/2)).
-dual(#<(A,B), [#>=(A,B)]) :- assertz(passed(958, dual/2)).
-dual(#>(A,B), [#=<(A,B)]) :- assertz(passed(959, dual/2)).
-dual(#=<(A,B), [#>(A,B)]) :- assertz(passed(960, dual/2)).
-dual(#>=(A,B), [#<(A,B)]) :- assertz(passed(961, dual/2)).
+dual(#=(A,B), [#<(A,B), #>(A,B)]).
+dual(#<(A,B), [#>=(A,B)]).
+dual(#>(A,B), [#=<(A,B)]).
+dual(#=<(A,B), [#>(A,B)]).
+dual(#>=(A,B), [#<(A,B)]).
 
-dual(=(A,B), [\=(A,B)]) :- assertz(passed(963, dual/2)).
-dual(\=(A,B), [=(A,B)]) :- assertz(passed(964, dual/2)).
+dual(=(A,B), [\=(A,B)]).
+dual(\=(A,B), [=(A,B)]).
 
 
 %!  dump_constraint(+C_Vars, +C_Vars1, -Dump, +Pending0, -Pending) is det
@@ -975,21 +980,21 @@ dual(\=(A,B), [=(A,B)]) :- assertz(passed(964, dual/2)).
 dump_constraint([], [], [], Pending, Pending).
 dump_constraint([V|Vs], [V1|V1s], [V1 = V | Vs_Dump], P0, P1) :-
     ground(V), !,
-    dump_constraint(Vs, V1s, Vs_Dump, P0, P1), assertz(passed(976, dump_constraint/5)).
+    dump_constraint(Vs, V1s, Vs_Dump, P0, P1).
 dump_constraint([V|Vs], [V1|V1s], Rs_Dump, P0, P1) :-
     get_neg_var(V, List),
     List \== [], !,
     dump_neg_list(V1, List, V_Dump),
     dump_constraint(Vs, V1s, Vs_Dump, P0, P1),
-    append(V_Dump, Vs_Dump, Rs_Dump), assertz(passed(979, dump_constraint/5)).
+    append(V_Dump, Vs_Dump, Rs_Dump).
 dump_constraint([V|Vs], [V1|V1s], Vs_Dump, PV-PV1, P1) :-
-    dump_constraint(Vs, V1s, Vs_Dump, [V|PV]-[V1|PV1], P1), assertz(passed(985, dump_constraint/5)).
+    dump_constraint(Vs, V1s, Vs_Dump, [V|PV]-[V1|PV1], P1).
 
 dump_neg_list(_,[],[]) :- !.
-dump_neg_list(V,[L|Ls],[V \= L|Rs]) :- dump_neg_list(V,Ls,Rs), assertz(passed(988, dump_neg_list/5)).
+dump_neg_list(V,[L|Ls],[V \= L|Rs]) :- dump_neg_list(V,Ls,Rs).
 
 clp_vars_in(Vars, ClpVars) :-
-    include(is_clpq_var, Vars, ClpVars), assertz(passed(991, clp_vars_in/2)).
+    include(is_clpq_var, Vars, ClpVars).
 
 %!  collect_vars(?Forall, ?CollectForall)
 %
@@ -999,9 +1004,9 @@ collect_vars(Forall, c_forall(Vars, Goal)) :-
     collect_vars_(Forall, [], Vars, Goal).
 
 collect_vars_(forall(Var, Goal), Vars, [Var|Vars], Goal) :-
-    Goal \= forall(_, _), !, assertz(passed(1001, collect_vars_/4)).
+    Goal \= forall(_, _), !.
 collect_vars_(forall(Var, Forall), V0, V1, Goal) :-
-    collect_vars_(Forall, [Var|V0], V1, Goal), assertz(passed(1003, collect_vars_/4)).
+    collect_vars_(Forall, [Var|V0], V1, Goal).
 
 
 		 /*******************************
@@ -1068,3 +1073,6 @@ member_var(Vars, Var) :-
     member(V, Vars),
     Var == V,
     !.
+
+member_stack(Goal, Stack) :- member(goal_origin(Goal, _), Stack).
+member_stack(Goal, Stack) :- member(Goal, Stack).

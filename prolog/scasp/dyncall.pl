@@ -1,6 +1,5 @@
 :- module(scasp_dyncall,
-          [ scasp/1,                    % :Query
-            scasp/2,                    % :Query, +Options
+          [ scasp/2,                    % :Query, +Options
             scasp_query_clauses/2,      % :Query, -Clauses
             scasp_model/1,              % -Model
             scasp_justification/2,      % -Tree, +Options
@@ -16,6 +15,13 @@
             (pred)/1,
             (show)/1,
             (abducible)/1,
+
+            (#=)/2,
+            (#<>)/2,
+            (#<)/2,
+            (#>)/2,
+            (#=<)/2,
+            (#>=)/2,
 
             op(900, fy, not),
             op(950, xfx, ::),           % pred not x :: "...".
@@ -36,11 +42,11 @@
 :- use_module(common).
 :- use_module(modules).
 :- use_module(listing).
+:- use_module(clp/clpq, [apply_clpq_constraints/1]).
 :- use_module(pr_rules, [process_pr_pred/5]).
 :- use_module(predicates, [prolog_builtin/1, clp_builtin/1]).
 
 :- meta_predicate
-    scasp(0),
     scasp(0, +),
     scasp_show(:, +),
     scasp_query_clauses(:, -),
@@ -90,9 +96,6 @@ Issues:
 %     - tree(-Tree)
 %       Unify Tree with the s(CASP) justification tree.  See
 %       scasp_justification/2 for details.
-
-scasp(Query) :-
-    scasp(Query, []).
 
 scasp(Query, Options) :-
     scasp_query_clauses(Query, Clauses),
@@ -165,10 +168,10 @@ scasp_query_clauses(Query, Clauses) :-
     findall(Clause, scasp_clause(Callees, Clause), Clauses, QConstraints),
     maplist(mkconstraint, Constraints, QConstraints).
 
-scasp_clause(Callees, Clause) :-
+scasp_clause(Callees, source(ClauseRef, Clause)) :-
     member(PI, Callees),
     pi_head(PI, M:Head),
-    @(clause(Head, Body), M),
+    @(clause(Head, Body, ClauseRef), M),
     mkclause(Head, Body, M, Clause).
 
 mkclause(Head, true, M, Clause) =>
@@ -176,7 +179,7 @@ mkclause(Head, true, M, Clause) =>
 mkclause(Head, Body, M, Clause) =>
     qualify((Head:-Body), M, Clause).
 
-mkconstraint(M:Body, (:- Constraint)) :-
+mkconstraint(source(Ref, M:Body), source(Ref, (:- Constraint))) :-
     qualify(Body, M, Constraint).
 
 qualify(-(Head), M, Q) =>
@@ -243,8 +246,9 @@ include_global_constraint(Callees0, Constraints, Callees) :-
     include_global_constraint(Callees0, Callees, [], Constraints).
 
 include_global_constraint(Callees0, Callees, Constraints0, Constraints) :-
-    global_constraint(Body),
-    \+ ( member(Body0, Constraints0),
+    global_constraint(Constraint),
+    Constraint = source(_, Body),
+    \+ ( member(source(_, Body0), Constraints0),
          Body =@= Body0
        ),
     query_callees(Body, Called),
@@ -252,17 +256,17 @@ include_global_constraint(Callees0, Callees, Constraints0, Constraints) :-
     !,
     ord_union(Callees0, Called, Callees1),
     include_global_constraint(Callees1, Callees,
-                              [Body|Constraints0], Constraints).
+                              [Constraint|Constraints0], Constraints).
 include_global_constraint(Callees, Callees, Constraints, Constraints).
 
 
-global_constraint(M:Body) :-
+global_constraint(source(Ref, M:Body)) :-
     (   current_temporary_module(M)
     ;   current_module(M)
     ),
     current_predicate(M:(-)/0),
     \+ predicate_property(M:(-), imported_from(_)),
-    @(clause(-, Body), M).
+    @(clause(-, Body, Ref), M).
 
 %!  predicate_callees(:Head, -Callees) is det.
 %
@@ -588,6 +592,28 @@ user:goal_expansion(-Goal, MGoal) :-
 
 
 		 /*******************************
+		 *              CLP		*
+		 *******************************/
+
+%!  #=(?A, ?B).
+%!  #<>(?A, ?B).
+%!  #<(?A, ?B).
+%!  #>(?A, ?B).
+%!  #>=(?A, ?B).
+%!  #=<(?A, ?B).
+%
+%   Implementation of the s(CASP) constraints.   This  implementation is
+%   normally not used and mostly makes the program analysis work.
+
+A #=  B :- apply_clpq_constraints(A #=  B).
+A #<> B :- apply_clpq_constraints(A #<> B).
+A #<  B :- apply_clpq_constraints(A #<  B).
+A #>  B :- apply_clpq_constraints(A #>  B).
+A #=< B :- apply_clpq_constraints(A #=< B).
+A #>= B :- apply_clpq_constraints(A #>= B).
+
+
+		 /*******************************
 		 *            SANDBOX		*
 		 *******************************/
 
@@ -599,5 +625,4 @@ user:goal_expansion(-Goal, MGoal) :-
 % member/2. s(CASP) does not allow for calling _qualified goals,
 % lists:member(...),
 
-sandbox:safe_meta(scasp_dyncall:scasp(_), []).
 sandbox:safe_meta(scasp_dyncall:scasp(_, _), []).

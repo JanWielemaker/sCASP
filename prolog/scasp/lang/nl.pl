@@ -1,4 +1,4 @@
-:- module(casp_lang_en,
+:- module(casp_lang_nl,
           [ scasp_message//1
           ]).
 :- use_module(library(dcg/high_order)).
@@ -7,53 +7,45 @@
 :- multifile
     scasp_messages:scasp_lang_module/2.
 
-scasp_messages:scasp_lang_module(en, casp_lang_en).
-
-:- multifile
-    prolog:error_message//1.
-
-prolog:error_message(existence_error(scasp_query, scasp_main)) -->
-    [ 'sCASP: the program does not contain a query'-[] ].
-prolog:error_message(existence_error(scasp_query, M)) -->
-    [ 'sCASP: no query in module ~p'-[M] ].
+scasp_messages:scasp_lang_module(nl, casp_lang_nl).
 
 
 		 /*******************************
-		 *            CASP		*
+		 *            SCASP		*
 		 *******************************/
 
 scasp_message(version(Version)) -->
-    [ 'version ~w'-[Version] ].
+    [ 'versie ~w'-[Version] ].
 
 % Usage messages
 
 scasp_message(source_not_found(Source)) -->
     (   \+ { access_file(Source, exist) }
-    ->  [ 'Input file '-[] ], code(Source), [ ' does not exist'-[] ]
-    ;   [ 'Cannot read input file '-[] ], code(Source)
+    ->  [ 'Invoer bestand '-[] ], code(Source), [ ' bestaat niet'-[] ]
+    ;   [ 'Kan invoer bestand '-[] ], code(Source), [ ' niet lezen'-[] ]
     ).
 scasp_message(no_input_files) -->
-    [ 'No input file specified!' ].
+    [ 'Geen invoer gespecificeerd!' ].
 scasp_message(no_query) -->
-    [ 'the program does not contain ?- Query.'-[] ].
+    [ 'Het programma bevat geen ?- Query.'-[] ].
 scasp_message(undefined_operator(Op)) -->
-    [ 'clp operator ~p not defined'-[Op] ].
+    [ 'clp operator ~p is niet gedefinieerd'-[Op] ].
 scasp_message(at_most_one_of([A,B])) -->
-    ['Options '], opt(A), [' and '], opt(B),
-    [' cannot be used together' ].
+    ['Opties '], opt(A), [' and '], opt(B),
+    [' gaan niet samen' ].
 scasp_message(at_most_one_of(List)) -->
-    [ 'At most one of the options '-[] ],
+    [ 'Maximaal een van de opties '-[] ],
     options(List),
-    [ ' is allowed.'-[] ].
+    [ ' kan gelijktijdig gebruikt worden.'-[] ].
 scasp_message(opt_dcc_prev_forall) -->
-    [ 'Option --dcc can only be used with --forall=prev' ].
+    [ 'Optie --dcc kan alleen samen met --forall=prev' ].
 scasp_message(opt_incompatible(Opt1, Opt2)) -->
-    [ 'Option ' ], opt(Opt1), [' is not compatible with '], opt(Opt2).
+    [ 'Optie ' ], opt(Opt1), [' gaat niet samen met '], opt(Opt2).
 
 % Solver messages
 
 scasp_message(failure_calling_negation(Goal)) -->
-    [ 'Failure calling negation of '-[] ], goal(Goal).
+    [ 'Negatie van '-[] ], goal(Goal), [ ' faalt'-[] ].
 scasp_message(co_failing_in_negated_loop(Goal, NegGoal)) -->
     [ 'Co-Failing in a negated loop due to a variant call'-[], nl,
       '(extension clp-disequality required).'-[]
@@ -90,38 +82,39 @@ scasp_message(dcc_discard(Goal, BodyL)) -->
 % Results
 
 scasp_message(no_models(CPU)) -->
-    [ 'No models (~3f seconds)'-[CPU] ].
+    [ 'Geen modellen (~3f seconden)'-[CPU] ].
 
 
 % Justifications
 
-scasp_message(and)       --> [ 'and' ].
-scasp_message(or)        --> [ 'or' ].
-scasp_message(not)       --> [ 'there is no evidence that' ].
-scasp_message(-)         --> [ 'it is not the case that' ].
-scasp_message(implies)   --> [ 'because' ].
+scasp_message(and)       --> [ 'en' ].
+scasp_message(or)        --> [ 'of' ].
+scasp_message(not)       --> [ 'er is geen bewijs dat' ].
+scasp_message(-)         --> [ 'het is niet het geval dat' ].
+scasp_message(implies)   --> [ 'omdat' ].
 scasp_message(?)         --> [ '?' ].
-scasp_message(proved)    --> ['justified above'].
-scasp_message(chs)       --> ['it is assumed that'].
-scasp_message(assume)    --> ['we assume that'].
-scasp_message(holds)     --> [' holds'].
-scasp_message(holds_for) --> [' holds for '].
-scasp_message(not_in)    --> ['not'].
-scasp_message(neq)       --> ['not equal to'].
-scasp_message(_>_)       --> ['is greater than'].
-scasp_message(_>=_)      --> ['is greater than or equal to'].
-scasp_message(_<_)       --> ['is less than'].
-scasp_message(_=<_)      --> ['is less than or equal to'].
-scasp_message(_#=_)      --> ['equal to'].
-scasp_message(_#<>_)     --> ['not equal to'].
-scasp_message(_#>_)      --> ['greater than'].
-scasp_message(_#>=_)     --> ['greater than or equal to'].
-scasp_message(_#<_)      --> ['less than'].
-scasp_message(_#=<_)     --> ['less than or equal to'].
+scasp_message(proved)    --> ['als hierboven aangetoond'].
+scasp_message(chs)       --> ['het is aangenomen dat'].
+scasp_message(assume)    --> ['we nemen aan dat'].
+scasp_message(holds)     --> [' is waar'].
+scasp_message(holds_for) --> [' is waar voor '].
+scasp_message(not_in)    --> ['niet zijnde'].
+scasp_message(neq)       --> ['ongelijk aan'].
+scasp_message(_>_)       --> ['is groter dan'].
+scasp_message(_>=_)      --> ['is groter dan of gelijk aan'].
+scasp_message(_<_)       --> ['is kleiner dan'].
+scasp_message(_=<_)      --> ['is kleiner dan of gelijk aan'].
+scasp_message(_#=_)      --> ['gelijk aan'].
+scasp_message(_#<>_)     --> ['ongelijk aan'].
+scasp_message(_#>_)      --> ['groter dan'].
+scasp_message(_#>=_)     --> ['groter dan of gelijk aan'].
+scasp_message(_#<_)      --> ['kleiner dan'].
+scasp_message(_#=<_)     --> ['kleiner dan of gelijk aan'].
 scasp_message(global_constraints_hold) -->
-    [ 'The global constraints hold' ].
+    [ 'Aan alle globale restricties is voldaan' ].
 scasp_message(global_constraint(N)) -->
-    [ 'the global constraint number ', N, ' holds' ].
+    [ 'Aan de globale restrictie nummer ', N, ' is voldaan' ].
+
 
 
 		 /*******************************
@@ -146,11 +139,6 @@ print_stack([[]|As],I) -->
     !,
     { I1 is I - 4 },
     print_stack(As, I1).
-print_stack([goal_origin(A, _)|As],I) -->
-    !,
-    ['~t~*|'-[I]], goal(A), [ nl ],
-    { I1 is I + 4 },
-    print_stack(As,I1).
 print_stack([A|As],I) -->
     ['~t~*|'-[I]], goal(A), [ nl ],
     { I1 is I + 4 },

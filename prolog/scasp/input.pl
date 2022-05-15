@@ -114,17 +114,17 @@ sasp_read(File, Statements, Options) :-
                        ]),
     setup_call_cleanup(
         open(Path, read, In),
-        sasp_read_stream_raw(In, Statements,
+        sasp_read_stream_raw(Path, In, Statements,
                              [ base(Path),
                                stream(In)
                              | Options
                              ]),
         close(In)).
 
-sasp_read_stream_raw(In, Statements, Options) :-
+sasp_read_stream_raw(Path, In, Statements, Options) :-
     setup_call_cleanup(
         prep_read(Undo),
-        sasp_read_stream(In, Statements, Options),
+        sasp_read_stream(Path, In, Statements, Options),
         call(Undo)).
 
 %!  prep_read(-Undo)
@@ -152,7 +152,7 @@ update_flag(Flag-Value, set_prolog_flag(Flag, Old)) :-
 %
 %   Read the content of the stream In into a list of sCASP statements.
 
-sasp_read_stream(In, Statements, Options) :-
+sasp_read_stream(Path, In, Statements, Options) :-
     context_module(M),
     read_term(In, Term,
               [ module(M),
@@ -165,13 +165,13 @@ sasp_read_stream(In, Statements, Options) :-
     ->  Statements = []
     ;   Term = (:- use_module(library(File))),
         nonvar(File)
-    ->  sasp_read_stream(In, Statements, Options)
-    ;   sasp_statement(Term, VarNames, New, Pos, Options),
+    ->  sasp_read_stream(Path, In, Statements, Options)
+    ;   sasp_statement(source(Path, Term), VarNames, New, Pos, Options),
         add_statements(New, Tail, Statements),
-        sasp_read_stream(In, Tail, Options)
+        sasp_read_stream(Path, In, Tail, Options)
     ).
 
-add_statements(New, Tail, Statements) :-
+add_statements(source(_, New), Tail, Statements) :-
     is_list(New),
     !,
     append(New, Tail, Statements).
@@ -193,11 +193,32 @@ add_statements(New, Tail, [New|Tail]).
 
 :- det(sasp_statement/5).
 
-sasp_statement(Term, VarNames, SASP, Pos, Options) :-
+sasp_statement(source(Ref, Term), VarNames, source(Ref, SASP), Pos, Options) :-
+    blob(Ref, clause),
+    !,
+    sasp_statement_(Term, VarNames, SASP, Pos, [source(Ref)|Options]).
+sasp_statement(source(Path, Term), VarNames, source(Ref, SASP), Pos, Options) :-
+    !,
+    assert_sasp_source_reference(Path, Pos, Ref),
+    sasp_statement_(Term, VarNames, SASP, Pos, [source(Ref)|Options]).
+sasp_statement_(Term, VarNames, SASP, Pos, Options) :-
     maplist(bind_var,VarNames),
     term_variables(Term, Vars),
     bind_anon(Vars, 0),
     sasp_statement(Term, SASP, Pos, Options).
+
+
+:- dynamic sasp_source_reference/3.
+
+:- det(assert_sasp_source_reference/3).
+assert_sasp_source_reference(Path, Pos, Ref) :-
+    sasp_source_reference(Ref, Path, Pos), !.
+assert_sasp_source_reference(Path, Pos, Ref) :-
+    (   sasp_source_reference(Ref0, _, _)
+    ->  Ref is Ref0 + 1
+    ;   Ref is 1
+    ),
+    asserta(sasp_source_reference(Ref, Path, Pos)).
 
 bind_var(Name=Var) :-
     Var = $Name.
@@ -360,17 +381,18 @@ directive(pred(Pred::Template), Statements, Pos, Options) =>
     Statements = (:- pred(SASPPred::Template)).
 directive(abducible(Pred), Rules, Pos, Options) =>
     sasp_predicate(Pred, ASPPred, Pos, Options),
-    abducible_rules(ASPPred, Rules).
+    abducible_rules(ASPPred, Rules, Options).
 directive(Directive, Statements, Pos, Options) =>
     sasp_syntax_error(invalid_directive(Directive), Pos, Options),
     Statements = [].
 
 abducible_rules(Head,
-                [ Head                 - [ not AHead, abducible_1(Head) ],
-                  AHead                - [ not Head ],
-                  abducible_1(Head)    - [ not '_abducible_1'(Head) ],
-                  '_abducible_1'(Head) - [ not abducible_1(Head) ]
-                ]) :-
+                [ source(Ref, Head                 - [ not AHead, abducible_1(Head) ]),
+                  source(Ref, AHead                - [ not Head                     ]),
+                  source(Ref, abducible_1(Head)    - [ not '_abducible_1'(Head)     ]),
+                  source(Ref, '_abducible_1'(Head) - [ not abducible_1(Head)        ])
+                ], Options) :-
+    option(source(Ref), Options, no_path-no_position),
     Head =.. [F|Args],
     atom_concat('_', F, AF),
     AHead =.. [AF|Args].

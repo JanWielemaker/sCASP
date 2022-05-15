@@ -65,8 +65,8 @@ justification_tree(M:Stack, M:JustificationTree, Options) :-
 %     [p, q, [], []]			p-[q-[]]
 %     [p, q, [], r, [], []]		p-[q-[],r-[]]
 %
-%     We main a stack of  difference  lists   in  the  4th  argument. On
-%     encountering a `[]` we pop this stack.
+%     We maintain a stack of  difference  lists   in  the  4th  argument.
+%     On encountering a `[]` we pop this stack.
 
 stack_tree(Stack, Tree) :-
     stack_tree(Stack, Tree, [], []).
@@ -91,6 +91,9 @@ stack_tree([H|Stack], Tree, T, Parents) =>
 %        Remove all not(_) nodes from the tree.
 
 filter_tree([],_,[], _).
+filter_tree([goal_origin(Term,_)-Children|Cs], M, Tree, Options) :-
+    !,
+    filter_tree([Term-Children|Cs], M, Tree, Options).
 filter_tree([Term0-Children|Cs], M, Tree, Options) :-
     filter_pos(Term0, Options),
     raise_negation(Term0, Term),

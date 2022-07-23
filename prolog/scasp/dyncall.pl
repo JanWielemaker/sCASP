@@ -8,13 +8,16 @@
 
             (scasp_dynamic)/1,          % :Spec
             scasp_assert/1,             % :Clause
+            scasp_assert/2,             % :Clause
             scasp_retract/1,            % :Clause
             scasp_retractall/1,         % :Head
             scasp_abolish/1,            % :PredicateIndicator
             (#)/1,                      % :Directive
+            (#)/2,                      % :Directive, +Pos
             (pred)/1,
             (show)/1,
             (abducible)/1,
+            (abducible)/2,
 
             (#=)/2,
             (#<>)/2,
@@ -41,6 +44,7 @@
 :- use_module(embed).
 :- use_module(common).
 :- use_module(modules).
+:- use_module(source_ref).
 :- use_module(listing).
 :- use_module(clp/clpq, [apply_clpq_constraints/1]).
 :- use_module(pr_rules, [process_pr_pred/5]).
@@ -399,7 +403,6 @@ scasp_dynamic(Name/Arity, M, Scoped) =>
                      M:NName/Arity))
     ).
 
-
 %!  scasp_assert(:Clause) is det.
 %!  scasp_retract(:Clause) is nondet.
 %!  scasp_retractall(:Head) is det.
@@ -412,24 +415,36 @@ scasp_dynamic(Name/Arity, M, Scoped) =>
 %     - `false :- Constraint`.
 %     - `:- Constraint`.
 
-scasp_assert(M:(-Head :- Body0)) =>
+scasp_assert(Clause) :-
+    scasp_assert(Clause, false).
+
+scasp_assert(M:(-Head :- Body0), Pos) =>
     intern_negation(-Head, MHead),
     expand_goal(Body0, Body),
-    assertz(M:(MHead :- Body)).
-scasp_assert(M:(-Head)) =>
+    scasp_assert_(M:(MHead :- Body), Pos).
+scasp_assert(M:(-Head), Pos) =>
     intern_negation(-Head, MHead),
-    assertz(M:(MHead)).
-scasp_assert(M:(:- Body0)) =>
+    scasp_assert_(M:(MHead), Pos).
+scasp_assert(M:(:- Body0), Pos) =>
     expand_goal(Body0, Body),
-    assertz(M:((-) :- Body)).
-scasp_assert(M:(false :- Body0)) =>
+    scasp_assert_(M:((-) :- Body), Pos).
+scasp_assert(M:(false :- Body0), Pos) =>
     expand_goal(Body0, Body),
-    assertz(M:((-) :- Body)).
-scasp_assert(M:(Head :- Body0)) =>
+    scasp_assert_(M:((-) :- Body), Pos).
+scasp_assert(M:(Head :- Body0), Pos) =>
     expand_goal(Body0, Body),
-    assertz(M:(Head :- Body)).
-scasp_assert(Head) =>
-    assertz(Head).
+    scasp_assert_(M:(Head :- Body), Pos).
+scasp_assert(Head, Pos) =>
+    scasp_assert_(Head, Pos).
+
+scasp_assert_(Clause, false) =>
+    assertz(Clause).
+scasp_assert_(Clause, Pos) =>
+    assertz(Clause, Ref),
+    assertz(scasp_dynamic_clause_position(Ref, Pos)).
+
+scasp_assert_into(M, Pos, Rule) :-
+    scasp_assert(M:Rule, Pos).
 
 scasp_retract(M:(-Head :- Body0)) =>
     intern_negation(-Head, MHead),
@@ -476,9 +491,11 @@ scasp_abolish(M:(Name/Arity)) =>
 %   Handle s(CASP) directives.  Same as ``:- Directive.``.  Provides
 %   compatibility with sCASP sources as normally found.
 
-#(M:pred(Spec))      => pred(M:Spec).
-#(M:show(Spec))      => show(M:Spec).
-#(M:abducible(Spec)) => abducible(M:Spec).
+#(Directive) :- #(Directive, false).
+
+#(M:pred(Spec), _)        => pred(M:Spec).
+#(M:show(Spec), _)        => show(M:Spec).
+#(M:abducible(Spec), Pos) => abducible(M:Spec, Pos).
 
 pred(M:(Spec :: Template)) =>
     process_pr_pred(Spec :: Template, Atom, Children, Cond, Human),
@@ -511,19 +528,21 @@ show(PI) -->
 %   Declare Spec, a comma list  of   _heads_  to be _abducible_, meaning
 %   they can both be in or outside the model.
 
-abducible(M:(A,B)) =>
-    abducible(M:A),
-    abducible(M:B).
-abducible(M:Head), callable(Head) =>
+abducible(Spec) :- abducible(Spec, false).
+
+abducible(M:(A,B), Pos) =>
+    abducible(M:A, Pos),
+    abducible(M:B, Pos).
+abducible(M:Head, Pos), callable(Head) =>
     abducible_rules(Head, Rules),
-    @(maplist(assertz, Rules), M).
+    discontiguous(M:('abducible$'/1, 'abducible$$'/1)),
+    maplist(scasp_assert_into(M, Pos), Rules).
 
 abducible_rules(HeadIn,
                 [ (Head                 :- not AHead, 'abducible$'(Head)),
                   (AHead                :- not Head),
                   ('abducible$'(Head)   :- not 'abducible$$'(Head)),
-                  ('abducible$$'(Head)  :- not 'abducible$'(Head)),
-                  (:- discontiguous(('abducible$'/1, 'abducible$$'/1)))
+                  ('abducible$$'(Head)  :- not 'abducible$'(Head))
                 ]) :-
     ab_heads(HeadIn, Head, AHead).
 
@@ -626,3 +645,4 @@ A #>= B :- apply_clpq_constraints(A #>= B).
 % lists:member(...),
 
 sandbox:safe_meta(scasp_dyncall:scasp(_, _), []).
+

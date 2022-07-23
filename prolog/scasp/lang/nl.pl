@@ -99,6 +99,7 @@ scasp_message(assume)    --> ['we nemen aan dat'].
 scasp_message(holds)     --> [' is waar'].
 scasp_message(holds_for) --> [' is waar voor '].
 scasp_message(not_in)    --> ['niet zijnde'].
+scasp_message('\u2209'(_,_)) --> ['niet zijnde'].
 scasp_message(neq)       --> ['ongelijk aan'].
 scasp_message(_>_)       --> ['is groter dan'].
 scasp_message(_>=_)      --> ['is groter dan of gelijk aan'].
@@ -114,6 +115,9 @@ scasp_message(global_constraints_hold) -->
     [ 'Aan alle globale restricties is voldaan' ].
 scasp_message(global_constraint(N)) -->
     [ 'Aan de globale restrictie nummer ', N, ' is voldaan' ].
+scasp_message(abducible) -->
+    [ 'middels abductie concluderen we dat' ].
+scasp_message(according_to) --> [ 'volgens' ].
 
 
 

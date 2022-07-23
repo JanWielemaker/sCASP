@@ -80,6 +80,9 @@ scasp_encoded_module_term(MTerm, QTerm) =>
 
 %!  unqualify_model_term(+Module, +TermIn, -TermOut)
 
+unqualify_model_term(M, goal_origin(Term0, O), Term)  =>
+    unqualify_model_term(M, Term0, Term1),
+    Term = goal_origin(Term1, O).
 unqualify_model_term(M, Term0, Term),
     functor(Term0, Name, 1), model_wrapper(Name) =>
     Term0 =.. [Name,Arg0],
@@ -99,6 +102,7 @@ model_wrapper(not).
 model_wrapper(chs).
 model_wrapper(proved).
 model_wrapper(assume).
+model_wrapper(abduced).
 
 %!  model_term_module(:Term, -Module) is det.
 

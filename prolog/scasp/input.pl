@@ -43,6 +43,7 @@
 
 :- use_module(common).
 :- use_module(program).
+:- use_module(source_ref).
 
 /** <module> Read SASP source code
 
@@ -166,7 +167,7 @@ sasp_read_stream(Path, In, Statements, Options) :-
     ;   Term = (:- use_module(library(File))),
         nonvar(File)
     ->  sasp_read_stream(Path, In, Statements, Options)
-    ;   sasp_statement(source(Path, Term), VarNames, New, Pos, Options),
+    ;   sasp_statement(source(Path-Start, Term), VarNames, New, Pos, Options),
         add_statements(New, Tail, Statements),
         sasp_read_stream(Path, In, Tail, Options)
     ).
@@ -197,28 +198,16 @@ sasp_statement(source(Ref, Term), VarNames, source(Ref, SASP), Pos, Options) :-
     blob(Ref, clause),
     !,
     sasp_statement_(Term, VarNames, SASP, Pos, [source(Ref)|Options]).
-sasp_statement(source(Path, Term), VarNames, source(Ref, SASP), Pos, Options) :-
+sasp_statement(source(Path-Start, Term), VarNames, source(Ref, SASP), Pos, Options) :-
     !,
-    assert_sasp_source_reference(Path, Pos, Ref),
+    assert_scasp_source_reference(Path, Start, Ref),
     sasp_statement_(Term, VarNames, SASP, Pos, [source(Ref)|Options]).
+
 sasp_statement_(Term, VarNames, SASP, Pos, Options) :-
     maplist(bind_var,VarNames),
     term_variables(Term, Vars),
     bind_anon(Vars, 0),
     sasp_statement(Term, SASP, Pos, Options).
-
-
-:- dynamic sasp_source_reference/3.
-
-:- det(assert_sasp_source_reference/3).
-assert_sasp_source_reference(Path, Pos, Ref) :-
-    sasp_source_reference(Ref, Path, Pos), !.
-assert_sasp_source_reference(Path, Pos, Ref) :-
-    (   sasp_source_reference(Ref0, _, _)
-    ->  Ref is Ref0 + 1
-    ;   Ref is 1
-    ),
-    asserta(sasp_source_reference(Ref, Path, Pos)).
 
 bind_var(Name=Var) :-
     Var = $Name.

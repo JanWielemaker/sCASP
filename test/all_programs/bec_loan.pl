@@ -1,7 +1,7 @@
 % Basic Event Calculus
 
 %% Include the BASIC EVENT CALCULUS THEORY
-#include 'bec_theory.incl'.
+#include '../all_programs/bec_theory.incl'.
 
 is_1_day_after(B, A) :- B #= A + 1.
 

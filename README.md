@@ -1,3 +1,14 @@
+# Repository is moved
+
+__The s(CASP) port for SWI-Prolog is no longer in an experimental state
+and therefore this repository is moved to the [SWI-Prolog
+organization](https://github.com/SWI-Prolog/sCASP). After moving, the
+`master` branch from where the porting work started has been renamed to
+`ciao` and the `swipl` branch has become `master`.__
+
+__This repository is now archived.__
+
+
 # SWI-Prolog port (swipl branch)
 
 > This is a fork from https://gitlab.software.imdea.org/ciao-lang/sCASP.
